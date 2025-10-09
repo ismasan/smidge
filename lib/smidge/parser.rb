@@ -13,7 +13,7 @@ module Smidge
 
     ParameterNode = Hash[
       'name' => String,
-      'in' => String.options(%w[query path]),
+      'in' => String.options(%w[query path header]),
       'description?' => Description,
       'example?' => String,
       'required' => Boolean.default(false),
@@ -75,7 +75,9 @@ module Smidge
       'patch?' => VerbNode,
     ]
 
-    ServerNode = Hash['url' => Forms::URI::HTTP, 'description?' => Description]
+    # Server URLs can be paths, eg '/pets'
+    # based on the SPEC's URL
+    ServerNode = Hash['url' => String, 'description?' => Description]
     TagNode = Hash['name' => String, 'description?' => Description]
 
     SchemaResolver = proc do |r|
@@ -109,5 +111,11 @@ module Smidge
       'paths' => Hash[String, PathNode],
       'components' => Hash.default(BLANK_HASH)
     ] >> SchemaResolver
+
+    PlanMapper = OpenAPI.pipeline do |pl|
+      pl.step do |r|
+
+      end
+    end
   end
 end
