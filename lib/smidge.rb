@@ -40,20 +40,6 @@ module Smidge
     Client.new(spec, http:, base_url: base_url)
   end
 
-  def self.deep_symbolize_keys(hash)
-    hash.each.with_object({}) do |(k, v), h|
-      value = case v
-      when Hash
-        deep_symbolize_keys(v)
-      when Array
-        v.map { |e| e.is_a?(Hash) ? deep_symbolize_keys(e) : e }
-      else
-        v
-      end
-      h[k.to_sym] = value
-    end
-  end
-
   def self.to_method_name(str)
     str.to_s
       .gsub(/([a-z\d])([A-Z])/, '\1_\2') # split camel case
