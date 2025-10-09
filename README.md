@@ -1,8 +1,20 @@
 # Smidge
 
-TODO: Delete this and the text below, and describe your gem
+**WORK IN PROGRESS**
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/smidge`. To experiment with that code, run `bin/console` for an interactive prompt.
+A lightweight HTTP client that automatically generates methods from OpenAPI specifications
+
+  Key features
+
+  1. OpenAPI spec parsing - Reads OpenAPI 3.0 specs from URLs, files, or hashes (lib/smidge/parser.rb:1)
+  2. Dynamic client generation - Automatically creates methods for each API endpoint based on the spec's operationId (lib/smidge/client.rb:118-124)
+  3. Parameter handling - Extracts and handles:
+    - Path parameters (e.g., /users/{id})
+    - Query parameters
+    - Request body parameters (JSON)
+  (lib/smidge/client.rb:38-98)
+  4. HTTP adapters - Pluggable HTTP transport layer supporting both real HTTP requests and in-process adapters for testing
+  5. LLM integration - Includes an example showing how to convert API endpoints into LLM tools using RubyLLM (examples/llm_chat.rb:1)
 
 ## Installation
 
@@ -22,7 +34,16 @@ gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
 
 ## Usage
 
-TODO: Write usage instructions here
+```ruby
+# Load API from OpenAPI spec
+client = Smidge.from_openapi('https://api.example.com/openapi.json')
+
+# Call endpoints using generated methods
+client.get_users(limit: 10)
+client.create_post(title: 'Hello', body: 'World')
+```
+
+The gem uses [Plumb](https://github.com/ismasan/plumb) for data validation and transformation. It's designed to make consuming APIs easier by eliminating boilerplate HTTP client code, and to use and test APIS that expose OpenAPI specs.
 
 ## Development
 
