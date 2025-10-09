@@ -36,6 +36,23 @@ RSpec.describe Smidge::Parser do
             {"name" => "q", "in" => "query", "description" => "search by name", "example" => "bill", "required" => false},
             {"name" => "cat", "in" => "query", "description" => "search by category", "required" => false}
           ]
+        },
+        'post' => {
+          'description' => 'Create a user',
+          "requestBody" => {
+            "required" => true, 
+            "content" => {
+              "application/json" => {
+                "schema" => {
+                  'type' => 'object',
+                  'properties' => {
+                    'name' => {'type' => 'string', 'description' => 'User name'},
+                    'age' => {'type' => 'integer'}
+                  }
+                }
+              }
+            }
+          }
         }
       },
       '/users/{id}' => {
@@ -83,6 +100,7 @@ RSpec.describe Smidge::Parser do
     expect(param['in']).to eq 'path'
     expect(param['required']).to eq true
     expect(param['schema']['type']).to eq 'string'
+
     req_body_schema = update_user.dig('requestBody', 'content', 'application/json', 'schema')
     expect(req_body_schema['type']).to eq 'object'
     expect(req_body_schema['properties'].size).to eq 3
@@ -93,5 +111,14 @@ RSpec.describe Smidge::Parser do
     expect(req_body_schema['properties']['age']['example']).to eq 30
     expect(req_body_schema['properties']['file']['type']).to eq 'string'
     expect(req_body_schema['properties']['file']['format']).to eq 'byte'
+
+    create_user = spec.dig('paths', '/users', 'post')
+    expect(create_user['description']).to eq 'Create a user'
+    req_body_schema = create_user.dig('requestBody', 'content', 'application/json', 'schema')
+    expect(req_body_schema['type']).to eq 'object'
+    expect(req_body_schema['properties'].size).to eq 2
+    expect(req_body_schema['required']).to eq []
+    expect(req_body_schema['properties']['name']['type']).to eq 'string'
+    expect(req_body_schema['properties']['name']['description']).to eq 'User name'
   end
 end

@@ -43,6 +43,8 @@ module Smidge
     
     ScalarNode = Hash[
       'type' => String,
+      'description?' => Description,
+      'example?' => Any,
       'nullable?' => Boolean,
       'format?' => String,
       'enum?' => Array,
