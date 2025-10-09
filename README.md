@@ -6,7 +6,7 @@ A lightweight HTTP client that automatically generates methods from OpenAPI spec
 
   Key features
 
-  1. OpenAPI spec parsing - Reads OpenAPI 3.0 specs from URLs, files, or hashes (lib/smidge/parser.rb:1)
+  1. OpenAPI spec parsing - Reads [OpenAPI 3.x](https://spec.openapis.org/oas/v3.2.0) specs from URLs, files, or hashes (lib/smidge/parser.rb:1)
   2. Dynamic client generation - Automatically creates methods for each API endpoint based on the spec's operationId (lib/smidge/client.rb:118-124)
   3. Parameter handling - Extracts and handles:
     - Path parameters (e.g., /users/{id})
@@ -44,6 +44,8 @@ client.create_post(title: 'Hello', body: 'World')
 ```
 
 The gem uses [Plumb](https://github.com/ismasan/plumb) for data validation and transformation. It's designed to make consuming APIs easier by eliminating boilerplate HTTP client code, and to use and test APIS that expose OpenAPI specs.
+
+Any OpenAPI 3.0 spec will do, but I'm also working on [Steppe](https://github.com/ismasan/steppe), a Ruby toolkit for building REST APIs that generate OpenAPI specs automatically.
 
 ## Development
 
