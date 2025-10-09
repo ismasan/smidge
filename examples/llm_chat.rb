@@ -11,36 +11,6 @@ require 'debug'
 # Run with
 #   OPENAI_API_KEY=xxx OPEN_API=<URL> bundle exec exec ruby examples/llm_chat.rb
 #
-module Smidge
-  class LLMTool < RubyLLM::Tool
-    def self.from_client(client)
-      client._operations.values.map do |op|
-        from_op(op).new(client, op)
-      end
-    end
-
-    def self.from_op(op)
-      Class.new(self).tap do |k|
-        k.description op.description
-        op.params.each do |param|
-          k.param param.name, type: param.type, desc: param.description_with_example, required: param.required
-        end
-      end
-    end
-
-    def initialize(client, op)
-      @client = client
-      @op = op
-    end
-
-    def name = @op.rel_name.to_s
-
-    def execute(**kargs)
-      @client.send(@op.rel_name, **kargs).body
-    end
-  end
-end
-
 RubyLLM.configure do |config|
   config.openai_api_key = ENV.fetch('OPENAI_API_KEY')
 end
@@ -49,10 +19,10 @@ OPEN_API_URL = ENV.fetch('OPEN_API', 'http://localhost:9292')
 CLIENT = Smidge.from_openapi(OPEN_API_URL, base_url: OPEN_API_URL)
 
 # Use the client's OpenAPI spec
-# to create RubyLLM tool classes
+# to create RubyLLM-compatible tool classes
 # that call the endpoints over HTTP
 #
-tools = Smidge::LLMTool.from_client(CLIENT)
+tools = CLIENT.to_llm_tools
 chat = RubyLLM.chat.with_tools(*tools)
 
 while (true) do

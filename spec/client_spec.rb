@@ -49,7 +49,7 @@ RSpec.describe Smidge::Client do
                     "schema" => {
                       "type" => "object", 
                       "properties" => {
-                        "name" => {"type" => "string", 'description' => 'User name' }, 
+                        "name" => {"type" => "string", 'description' => 'User name', 'example' => 'Joe' }, 
                         "age" => {"type" => "integer", 'example' => 30 },
                         "file" => {"type" => "string", "format" => "byte"}
                       }, 
@@ -87,6 +87,24 @@ RSpec.describe Smidge::Client do
 
     resp = client.update_user(id: 10, name: 'John', age: 30, file: 'filedata')
     expect(resp.body[:ok]).to be true
+  end
+
+  specify '#to_llm_tools' do
+    response = double(
+      'Response', 
+      body: {ok: true, id: 123, name: 'John'},
+      status: 200, 
+      content_type: 'application/json'
+    )
+    allow(http).to receive(:put).and_return(response)
+
+    tools = client.to_llm_tools
+    expect(tools.map(&:name)).to eq %w[users update_user]
+    expect(tools.map(&:description)).to eq ['List users', 'Update a user']
+    expect(tools.last.parameters.values.map(&:name)).to eq %i[id name age file]
+    expect(tools.last.parameters.values.map(&:description)).to eq ['', 'User name (eg Joe)', ' (eg 30)', '']
+    data = tools.last.call(id: 10, name: 'John', age: 30)
+    expect(data).to eq(ok: true, id: 123, name: 'John')
   end
 
   specify 'fail loudly if Hash is an incomplete OpenAPI spec' do
@@ -146,9 +164,8 @@ RSpec.describe Smidge::Client do
         expect(client._operations[:users].description).to eq('List users')
         client._operations[:users].query_params.first.tap do |p|
           expect(p.name).to eq(:q)
-          expect(p.description).to eq('search by name')
+          expect(p.description).to eq('search by name (eg bill)')
           expect(p.example).to eq('bill')
-          expect(p.description_with_example).to eq('search by name (e.g. bill)')
         end
       end
 

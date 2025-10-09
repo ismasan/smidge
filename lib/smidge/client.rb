@@ -22,16 +22,9 @@ module Smidge
         @type = attrs.fetch(:type, :string).to_sym
         @description = attrs[:description].to_s
         @example = attrs[:example].to_s
+        @description = [@description, "(eg #{@example})"].join(' ') unless @example.empty?
         @required = attrs.fetch(:required, false)
         freeze
-      end
-
-      def description_with_example
-        if example
-          "#{description} (e.g. #{example})"
-        else
-          description.to_s
-        end
       end
     end
 
@@ -74,6 +67,31 @@ module Smidge
         path_params + query_params + body_params
       end
 
+      # A tool class compatible with RubyLLM::Tool
+      class Tool
+        attr_reader :parameters
+
+        def initialize(op, client)
+          @op = op
+          @client = client
+          @parameters = op.params.each_with_object({}) do |p, memo|
+            memo[p.name] = p
+          end
+        end
+
+        def inspect = %(<#{self.class}:#{object_id} [#{name}] #{parameters.values.map(&:name).join(', ')}>)
+        def name = @op.rel_name.to_s
+        def description = @op.description.to_s
+        def call(args)
+          args = Plumb::Types::SymbolizedHash.parse(args)
+          @client.send(@op.rel_name, **args).body
+        end
+      end
+
+      def to_tool(client)
+        Tool.new(self, client)
+      end
+
       def path_for(kargs)
         path_params.reduce(path) do |tpath, param|
           if kargs.key?(param.name)
@@ -112,6 +130,8 @@ module Smidge
     def [](rel_name) = _operations[rel_name.to_sym]
 
     def inspect = %(<#{self.class}:#{object_id} #{base_url} "#{_info['title']}"/#{_info['version']} [#{_operations.size} operations]>)
+
+    def to_llm_tools = _operations.values.map { |op| op.to_tool(self) }
 
     private
 

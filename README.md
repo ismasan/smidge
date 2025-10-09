@@ -9,6 +9,7 @@ A lightweight HTTP client that automatically generates methods from OpenAPI spec
   1. OpenAPI spec parsing - Reads [OpenAPI 3.x](https://spec.openapis.org/oas/v3.2.0) specs from URLs, files, or hashes (lib/smidge/parser.rb:1)
   2. Dynamic client generation - Automatically creates methods for each API endpoint based on the spec's operationId (lib/smidge/client.rb:118-124)
   3. Parameter handling - Extracts and handles:
+
     - Path parameters (e.g., /users/{id})
     - Query parameters
     - Request body parameters (JSON)
@@ -47,6 +48,37 @@ The gem uses [Plumb](https://github.com/ismasan/plumb) for data validation and t
 
 Any OpenAPI 3.0 spec will do, but I'm also working on [Steppe](https://github.com/ismasan/steppe), a Ruby toolkit for building REST APIs that generate OpenAPI specs automatically.
 
+### Using with RubyLLM
+
+Smidge turns operations in the OpenAPI spec into tools objects that are compatible with [RubyLLM tools](https://rubyllm.com/tools/)
+
+
+
+```ruby
+# include RubyLLM in your Gemfile
+require 'ruby_llm'
+
+# configure RubyLLM with your provider's credentials
+RubyLLM.configure do |config|
+  config.openai_api_key = ENV.fetch('OPENAI_API_KEY')
+end
+
+# Load API from OpenAPI spec
+client = Smidge.from_openapi('https://some.wheather.api/openapi.json')
+
+# turn OpenAPI operations into RubyLLM-compatible tools
+tools = CLIENT.to_llm_tools
+
+# register tools with RubyLLM
+chat = RubyLLM.chat.with_tools(*tools)
+
+# chat with your API!
+response = chat.ask "What's the weather like in London tomorrow?"
+puts response.content
+```
+
+
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
@@ -59,4 +91,4 @@ Bug reports and pull requests are welcome on GitHub at https://github.com/ismasa
 
 ## License
 
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).	
