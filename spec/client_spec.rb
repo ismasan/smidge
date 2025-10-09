@@ -16,12 +16,12 @@ RSpec.describe Smidge::Client do
       },
       "servers" => [
         {
-          "url" => "http://localhost:4567",
+          "url" => "http://localhost:9292",
           "description" => "prod server"
         },
         {
-          "url" => "http://localhost:9292",
-          "description" => "Current server"
+          "url" => "https://staging.api.com",
+          "description" => "Staging server"
         }
       ],
       "paths" =>
@@ -49,11 +49,11 @@ RSpec.describe Smidge::Client do
                     "schema" => {
                       "type" => "object", 
                       "properties" => {
-                        "name" => {"type" => "string"}, 
-                        "age" => {"type" => "integer"}, 
+                        "name" => {"type" => "string", 'description' => 'User name' }, 
+                        "age" => {"type" => "integer", 'example' => 30 },
                         "file" => {"type" => "string", "format" => "byte"}
                       }, 
-                    "required" => ["name", "age", "file"]
+                    "required" => ["name", "age", 'file']
                   }
                 }
               }
@@ -91,7 +91,7 @@ RSpec.describe Smidge::Client do
 
   specify 'fail loudly if Hash is an incomplete OpenAPI spec' do
     expect {
-      described_class.new({info: {}}, http:)
+      described_class.new({info: {}}, http:, base_url: 'http://localhost:9292')
     }.to raise_error(Smidge::InvalidSpecError)
   end
 
@@ -115,15 +115,17 @@ RSpec.describe Smidge::Client do
     end
 
     describe 'with url' do
-      it 'uses HTTP adapter to fetch the spec' do
-        response = instance_double(
+      let(:response) do
+        instance_double(
           Net::HTTPResponse, 
           body: openapi_spec,
           code: 200, 
           content_type: 'application/json'
         )
+      end
 
-        expect(http).to receive(:get)
+      before do
+        allow(http).to receive(:get)
           .with(
             'https://api.com/openapi.json',
             headers: { 
@@ -134,7 +136,9 @@ RSpec.describe Smidge::Client do
             symbolize_names: false
           )
           .and_return(response)
+      end
 
+      it 'uses HTTP adapter to fetch the spec' do
         client = Smidge.from_openapi('https://api.com/openapi.json', http:)
         expect(client).to be_a(Smidge::Client)
         expect(client._operations[:users].rel_name).to eq(:users)
@@ -160,6 +164,37 @@ RSpec.describe Smidge::Client do
         expect {
           Smidge.from_openapi('https://api.com/openapi.json', http:)
         }.to raise_error(Smidge::MissingHTTPSpecError)
+      end
+    end
+
+    describe 'issuing requests' do
+      it 'delegates to the HTTP adapter' do
+        client = Smidge.from_openapi(openapi_spec, http:)
+
+        now = Time.now
+        response = instance_double(
+          Net::HTTPResponse, 
+          body: { name: 'Joe', age: 40, updated_at: now },
+          code: 200, 
+          content_type: 'application/json'
+        )
+
+        expect(http).to receive(:put)
+          .with(
+            'http://localhost:9292/users/1',
+            headers: { 
+              'Content-Type' => 'application/json', 
+              'Accept' => 'application/json',
+              'User-Agent' => "Smidge::Client/#{Smidge::VERSION} (Ruby/#{RUBY_VERSION})"
+            },
+            body: { name: 'Joe', age: 40 }
+          )
+          .and_return(response)
+
+        resp = client.update_user(id: 1, name: 'Joe', age: 40)
+        expect(resp.code).to eq(200)
+        expect(resp.body[:name]).to eq('Joe')
+        expect(resp.body[:updated_at]).to eq(now)
       end
     end
   end

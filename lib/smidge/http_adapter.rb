@@ -42,7 +42,7 @@ module Smidge
 
       res = http.request(req)
       if res.content_type == 'application/json' && res.body
-        res.body = JSON.new(res.read_body, symbolize_names:)
+        res.body = JSON.parse(res.read_body, symbolize_names:)
       end
 
       res

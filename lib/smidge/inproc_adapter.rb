@@ -46,7 +46,7 @@ module Smidge
       resp_body = rresponse.body.each_with_object(+'') { |part, memo| memo << part }
 
       if rresponse.content_type == JSON_MIME && resp_body && !resp_body.empty?
-        resp_body = JSON.new(resp_body, symbolize_names:)
+        resp_body = JSON.parse(resp_body, symbolize_names:)
       end
 
       response = Net::HTTPResponse::CODE_TO_OBJ[status.to_s].new('1.1', status.to_s, '')

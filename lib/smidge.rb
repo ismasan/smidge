@@ -3,6 +3,7 @@
 require 'pathname'
 require 'json'
 require_relative 'smidge/version'
+require_relative 'smidge/parser'
 
 module Smidge
   class Error < StandardError; end
@@ -35,6 +36,7 @@ module Smidge
       end
     end
 
+    spec = Parser::OpenAPI.parse(spec)
     Client.new(spec, http:, base_url: base_url)
   end
 

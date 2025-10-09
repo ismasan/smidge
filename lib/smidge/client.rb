@@ -45,11 +45,11 @@ module Smidge
         bschema = details.dig('requestBody', 'content', 'application/json', 'schema') || {}
         required = (bschema['required'] || [])
         body_params = (bschema['properties'] || {}).map do |name, prop|
-          attrs = {name:, required: required.include?(name)}.merge(Smidge.deep_symbolize_keys(prop))
+          attrs = {name:, required: required.include?(name)}.merge(Plumb::Types::SymbolizedHash.parse(prop))
           Param.new(attrs)
         end
 
-        raise InvalidSpecError, "Operation missing 'operationId'" if rel_name.empty?
+        rel_name = "#{verb}_#{path}" if rel_name.empty?
         raise InvalidSpecError, "Operation missing HTTP verb" if verb.to_s.empty?
         raise InvalidSpecError, "Operation missing HTTP path" if path.to_s.empty?
 
@@ -66,7 +66,7 @@ module Smidge
 
       def self.build_params(list)
         list.map do |param|
-          Param.new(Smidge.deep_symbolize_keys(param))
+          Param.new(Plumb::Types::SymbolizedHash.parse(param))
         end
       end
 
@@ -97,16 +97,21 @@ module Smidge
       end
     end
 
-    attr_reader :base_url, :_operations
+    attr_reader :base_url, :_operations, :_info
 
     def initialize(spec, http: HTTPAdapter.new, base_url: nil)
       @base_url = base_url ? URI(base_url) : __find_base_url(spec)
+      raise ArgumentError, "Base URL is required" unless @base_url
+
       @_http = http
       @_operations = __build_op_lookup(spec)
+      @_info = spec['info'] || {}
       define_methods!
     end
 
     def [](rel_name) = _operations[rel_name.to_sym]
+
+    def inspect = %(<#{self.class}:#{object_id} #{base_url} "#{_info['title']}"/#{_info['version']} [#{_operations.size} operations]>)
 
     private
 
@@ -129,7 +134,7 @@ module Smidge
     end
 
     def __find_base_url(spec)
-      srv = spec['servers']&.find { |s| s['description'] == 'Current server' } || spec['servers']&.first
+      srv = spec['servers']&.first
       srv ? URI(srv['url']) : nil
     end
 
