@@ -19,21 +19,22 @@ module Smidge
     end
   end
 
+  URL_EXP = /^http(s)?:\/\//
+  READER_INTERFACE = Plumb::Types::Interface[:read]
+
   def self.from_openapi(spec_url, http: HTTPAdapter.new, base_url: nil)
     spec = case spec_url
-    when /^http(s)?:\/\//
+    when URL_EXP
       resp = http.get(spec_url, headers: Client::REQUEST_HEADERS, symbolize_names: false)
       raise MissingHTTPSpecError.new(resp) unless (200..299).cover?(resp.code.to_i)
 
       resp.body
     when Hash
       spec_url
+    when READER_INTERFACE
+      JSON.parse(spec_url.read)
     else
-      if spec_url.respond_to?(:read)
-        JSON.parse(spec_url.read)
-      else
-        raise ArgumentError, "Unhandled spec: #{spec_url}"
-      end
+      raise ArgumentError, "Unhandled spec: #{spec_url}"
     end
 
     spec = Parser::OpenAPI.parse(spec)
