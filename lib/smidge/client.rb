@@ -29,31 +29,48 @@ module Smidge
 
     def inspect = %(<#{self.class}:#{object_id} #{base_url} "#{_info['title']}"/#{_info['version']} [#{_operations.size} operations]>)
 
-    def to_llm_tools = _operations.values.map { |op| op.to_tool(self) }
+    def to_llm_tools = _operations.values
 
     private
 
     def define_methods!
-      _operations.each do |name, op|
+      _operations.keys.each do |name|
         define_singleton_method(name) do |**kargs|
-          _run_op(op, **kargs)
+          _operations[name]
         end
       end
     end
 
-    def _run_op(op, **kargs)
-      kargs = kargs.dup
-      path = op.path_for(kargs)
-      query = op.query_for(kargs)
-      payload = op.payload_for(kargs)
-      uri = URI.join(base_url, path)
-      uri.query = URI.encode_www_form(query) if query.any?
-      @_http.public_send(op.verb, uri.to_s, body: payload, headers: REQUEST_HEADERS)
+    # Wrap an operation and provide #run(args)
+    # to issue requests
+    # and #call(args) for RubyLLM Tool compatibility
+    class RunnableOperation < SimpleDelegator
+      def initialize(op, base_url, http)
+        super op
+        @base_url = base_url
+        @http = http
+      end
+
+      def run(kargs = {})
+        kargs = kargs.dup
+        kargs = Plumb::Types::SymbolizedHash.parse(kargs)
+        path = path_for(kargs)
+        query = query_for(kargs)
+        payload = payload_for(kargs)
+        uri = URI.join(@base_url, path)
+        uri.query = URI.encode_www_form(query) if query.any?
+        @http.public_send(verb, uri.to_s, body: payload, headers: REQUEST_HEADERS)
+      end
+
+      # RubyLLM Tool compatible
+      def call(args = {})
+        run(args).body
+      end
     end
 
     def __build_op_lookup(operations)
       operations.each.with_object({}) do |op, memo|
-        memo[op.name] = op
+        memo[op.name] = RunnableOperation.new(op, base_url, @_http)
       end
     end
   end

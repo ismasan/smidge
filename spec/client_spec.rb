@@ -89,7 +89,16 @@ RSpec.describe Smidge::Client do
       )
       .and_return(response)
 
-    resp = client.update_user(id: 10, name: 'John', age: 30, file: 'filedata')
+    op = client.update_user
+    expect(op.name).to eq(:update_user)
+    expect(op.description).to eq('Update a user')
+    expect(op.parameters[:name].description).to eq('User name (eg Joe)')
+    expect(op.parameters[:name].name).to eq(:name)
+    expect(op.parameters[:name].in).to eq('body')
+    expect(op.parameters[:name].required).to be(true)
+    expect(op.parameters[:name].type).to eq(:string)
+
+    resp = op.run(id: 10, name: 'John', age: 30, file: 'filedata')
     expect(resp.body[:ok]).to be true
   end
 
@@ -103,7 +112,7 @@ RSpec.describe Smidge::Client do
     allow(http).to receive(:put).and_return(response)
 
     tools = client.to_llm_tools
-    expect(tools.map(&:name)).to eq %w[users update_user]
+    expect(tools.map(&:name)).to eq %i[users update_user]
     expect(tools.map(&:description)).to eq ['List users', 'Update a user']
     expect(tools.last.parameters.values.map(&:name)).to eq %i[id name age file]
     expect(tools.last.parameters.values.map(&:description)).to eq ['', 'User name (eg Joe)', ' (eg 30)', '']
@@ -221,7 +230,7 @@ RSpec.describe Smidge::Client do
           )
           .and_return(response)
 
-        resp = client.update_user(id: 1, name: 'Joe', age: 40)
+        resp = client.update_user.run(id: 1, name: 'Joe', age: 40)
         expect(resp.code).to eq(200)
         expect(resp.body[:name]).to eq('Joe')
         expect(resp.body[:updated_at]).to eq(now)

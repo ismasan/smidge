@@ -34,31 +34,6 @@ module Smidge
       end
     end
 
-    # A tool class compatible with RubyLLM::Tool
-    class Tool
-      attr_reader :parameters
-
-      def initialize(op, client)
-        @op = op
-        @client = client
-        @parameters = op.parameters.values.each_with_object({}) do |p, memo|
-          memo[p.name] = p
-        end
-      end
-
-      def inspect = %(<#{self.class}:#{object_id} [#{name}] #{parameters.values.map(&:name).join(', ')}>)
-      def name = @op.name.to_s
-      def description = @op.description.to_s
-      def call(args)
-        args = Plumb::Types::SymbolizedHash.parse(args)
-        @client.send(@op.name, **args).body
-      end
-    end
-
-    def to_tool(client)
-      Tool.new(self, client)
-    end
-
     def path_for(kargs)
       @params_in['path'].reduce(path) do |tpath, param|
         if kargs.key?(param.name)
