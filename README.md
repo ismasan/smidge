@@ -39,9 +39,20 @@ gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
 # Load API from OpenAPI spec
 client = Smidge.from_openapi('https://api.example.com/openapi.json')
 
-# Call endpoints using generated methods
-client.get_users(limit: 10)
+# Inspecting operations
+op = client.get_users
+# or op = client[:get_users]
+op.parameters[:q].description # "Filter users by name"
+op.parameters[:q].type # :string
+
+# Call endpoints using generated operations
+client.get_users.run(limit: 10) # Net::HTTP::Response, parsed #body
 client.create_post(title: 'Hello', body: 'World')
+
+# List all operations
+client._operations.values.each do |op|
+  p [op.name, op.parameters]
+end
 ```
 
 The gem uses [Plumb](https://github.com/ismasan/plumb) for data validation and transformation. It's designed to make consuming APIs easier by eliminating boilerplate HTTP client code, and to use and test APIS that expose OpenAPI specs.
