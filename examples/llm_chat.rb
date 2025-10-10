@@ -16,6 +16,8 @@ RubyLLM.configure do |config|
 end
 
 OPEN_API_URL = ENV.fetch('OPEN_API', 'http://localhost:9292')
+
+# Bootstrap Smidle client from OpenAPI spec
 CLIENT = Smidge.from_openapi(OPEN_API_URL, base_url: OPEN_API_URL)
 
 # Use the client's OpenAPI spec
