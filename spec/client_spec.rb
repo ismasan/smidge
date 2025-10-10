@@ -124,7 +124,7 @@ RSpec.describe Smidge::Client do
         reader = StringIO.new(json)
         client = Smidge.from_openapi(reader, http:)
         expect(client).to be_a(Smidge::Client)
-        expect(client._operations.values.map(&:rel_name)).to include(:users, :update_user)
+        expect(client._operations.values.map(&:name)).to include(:users, :update_user)
       end
     end
 
@@ -132,7 +132,7 @@ RSpec.describe Smidge::Client do
       it 'uses the hash as a spec' do
         client = Smidge.from_openapi(openapi_spec, http:)
         expect(client).to be_a(Smidge::Client)
-        expect(client._operations.values.map(&:rel_name)).to include(:users, :update_user)
+        expect(client._operations.values.map(&:name)).to include(:users, :update_user)
       end
     end
 
@@ -163,10 +163,10 @@ RSpec.describe Smidge::Client do
       it 'uses HTTP adapter to fetch the spec' do
         client = Smidge.from_openapi('https://api.com/openapi.json', http:)
         expect(client).to be_a(Smidge::Client)
-        expect(client._operations[:users].rel_name).to eq(:users)
+        expect(client._operations[:users].name).to eq(:users)
         expect(client._operations[:users].verb).to eq(:get)
         expect(client._operations[:users].description).to eq('List users')
-        client._operations[:users].query_params.first.tap do |p|
+        client._operations[:users].parameters.values.first.tap do |p|
           expect(p.name).to eq(:q)
           expect(p.description).to eq('search by name (eg bill)')
           expect(p.example).to eq('bill')

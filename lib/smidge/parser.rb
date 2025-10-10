@@ -129,28 +129,25 @@ module Smidge
       def self.call(result)
         path, verb, details = result.value
 
-        rel_name = details['operationId'].to_s.strip
+        name = details['operationId'].to_s.strip
         description = details['description'] || details['summary'] || ''
-        parameters = details['parameters']
-        path_params = ParamArray.parse(parameters.select { |p| p['in'] == 'path' })
-        query_params = ParamArray.parse(parameters.select { |p| p['in'] == 'query' })
+        parameters = ParamArray.parse(details['parameters'])
         bschema = details.dig('requestBody', 'content', 'application/json', 'schema') || {}
         required = (bschema['required'] || [])
         body_params = (bschema['properties'] || {}).map do |name, prop|
-          attrs = {name:, required: required.include?(name)}.merge(SymbolizedHash.parse(prop))
+          attrs = { in: 'body', name:, required: required.include?(name)}.merge(SymbolizedHash.parse(prop))
           Smidge::Operation::Param.new(attrs)
         end
 
-        rel_name = "#{verb}_#{path}" if rel_name.empty?
+        parameters.concat(body_params)
+        name = "#{verb}_#{path}" if name.empty?
 
         result.valid(Smidge::Operation.new(
-          rel_name: Smidge.to_method_name(rel_name).to_sym, 
+          name: Smidge.to_method_name(name).to_sym, 
           verb: verb.to_sym, 
           path:, 
           description:, 
-          path_params:, 
-          query_params:, 
-          body_params:
+          parameters:
         ))
       end
     end
@@ -161,9 +158,5 @@ module Smidge
     end
 
     OpenAPIToOperations = OpenAPI >> BuildOperations
-    # OpenAPIToOperations = OpenAPI.pipeline do |pl|
-    #   pl.step PathsToTuples
-    #   pl.step Array[TupleToOperation]
-    # end
   end
 end

@@ -25,7 +25,7 @@ module Smidge
       define_methods!
     end
 
-    def [](rel_name) = _operations[rel_name.to_sym]
+    def [](name) = _operations[name.to_sym]
 
     def inspect = %(<#{self.class}:#{object_id} #{base_url} "#{_info['title']}"/#{_info['version']} [#{_operations.size} operations]>)
 
@@ -53,7 +53,7 @@ module Smidge
 
     def __build_op_lookup(operations)
       operations.each.with_object({}) do |op, memo|
-        memo[op.rel_name] = op
+        memo[op.name] = op
       end
     end
   end

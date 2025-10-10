@@ -128,13 +128,13 @@ RSpec.describe Smidge::Parser do
     it 'parses an OpenAPI spec into a list of Smidge::Operation' do
       ops = Smidge::Parser::OpenAPIToOperations.parse(openapi_spec)
       expect(ops.map(&:class).uniq).to eq([Smidge::Operation])
-      expect(ops.map(&:rel_name)).to eq %i[users create_user update_user]
-      expect(ops.first.params.map(&:name)).to eq %i[q cat]
-      expect(ops.first.params.map(&:required)).to eq [false, false]
-      expect(ops.first.params.map(&:description)).to eq ['search by name (eg bill)', 'search by category']
+      expect(ops.map(&:name)).to eq %i[users create_user update_user]
+      expect(ops.first.parameters.values.map(&:name)).to eq %i[q cat]
+      expect(ops.first.parameters.values.map(&:required)).to eq [false, false]
+      expect(ops.first.parameters.values.map(&:description)).to eq ['search by name (eg bill)', 'search by category']
 
-      expect(ops.last.params.map(&:name)).to eq %i[id name age file]
-      expect(ops.last.params.map(&:required)).to eq [true, true, true, false]
+      expect(ops.last.parameters.values.map(&:name)).to eq %i[id name age file]
+      expect(ops.last.parameters.values.map(&:required)).to eq [true, true, true, false]
     end
   end
 end
