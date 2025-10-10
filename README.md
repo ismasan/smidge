@@ -6,32 +6,15 @@ A lightweight HTTP client that automatically generates methods from OpenAPI spec
 
   Key features
 
-  1. OpenAPI spec parsing - Reads [OpenAPI 3.x](https://spec.openapis.org/oas/v3.2.0) specs from URLs, files, or hashes (lib/smidge/parser.rb:1)
-  2. Dynamic client generation - Automatically creates methods for each API endpoint based on the spec's operationId (lib/smidge/client.rb:118-124)
+  1. OpenAPI spec parsing - Reads [OpenAPI 3.x](https://spec.openapis.org/oas/v3.2.0) specs from URLs, files, or hashes.
+  2. Dynamic client generation - Automatically creates methods for each API endpoint based on the spec's operationId
   3. Parameter handling - Extracts and handles:
 
     - Path parameters (e.g., /users/{id})
     - Query parameters
     - Request body parameters (JSON)
-  (lib/smidge/client.rb:38-98)
   4. HTTP adapters - Pluggable HTTP transport layer supporting both real HTTP requests and in-process adapters for testing
-  5. LLM integration - Includes an example showing how to convert API endpoints into LLM tools using RubyLLM (examples/llm_chat.rb:1)
-
-## Installation
-
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
-
-Install the gem and add to the application's Gemfile by executing:
-
-```bash
-bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
-```
-
-If bundler is not being used to manage dependencies, install the gem by executing:
-
-```bash
-gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
-```
+  5. LLM integration - Includes an example showing how to convert API endpoints into LLM tools using RubyLLM (`examples/llm_chat.rb`)
 
 ## Usage
 
@@ -88,6 +71,21 @@ response = chat.ask "What's the weather like in London tomorrow?"
 puts response.content
 ```
 
+## Installation
+
+TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
+
+Install the gem and add to the application's Gemfile by executing:
+
+```bash
+bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```
+
+If bundler is not being used to manage dependencies, install the gem by executing:
+
+```bash
+gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```
 
 
 ## Development
