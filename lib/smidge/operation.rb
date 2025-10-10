@@ -19,6 +19,13 @@ module Smidge
       freeze
     end
 
+    # Returns a string representation of the operation
+    #
+    # @return [String] A human-readable representation including name, HTTP verb, path, and parameter count
+    def inspect
+      %(<#{self.class}:#{object_id} #{name} #{verb.upcase} #{path} [#{parameters.size} params]>)
+    end
+
     class Param
       attr_reader :in, :name, :type, :description, :example, :required
 
