@@ -22,15 +22,19 @@ A lightweight HTTP client that automatically generates methods from OpenAPI spec
 # Load API from OpenAPI spec
 client = Smidge.from_openapi('https://api.example.com/openapi.json')
 
+# Calling operations as methods
+resp = client.get_users(q: 'b') # Net::HTTP::Response, parsed #body
+resp.body # [{name: 'Bill'}, {name: 'Bob'}]
+
+client.create_post(title: 'Hello', body: 'World')
+
 # Inspecting operations
-op = client.get_users
-# or op = client[:get_users]
+op = client[:get_users]
 op.parameters[:q].description # "Filter users by name"
 op.parameters[:q].type # :string
+# can still be called
+resp = op.run(q: 'b')
 
-# Call endpoints using generated operations
-client.get_users.run(limit: 10) # Net::HTTP::Response, parsed #body
-client.create_post(title: 'Hello', body: 'World')
 
 # List all operations
 client._operations.values.each do |op|

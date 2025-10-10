@@ -66,7 +66,7 @@ module Smidge
     def define_methods!
       _operations.keys.each do |name|
         define_singleton_method(name) do |**kargs|
-          _operations[name]
+          _operations[name].run(kargs)
         end
       end
     end

@@ -89,7 +89,7 @@ RSpec.describe Smidge::Client do
       )
       .and_return(response)
 
-    op = client.update_user
+    op = client[:update_user]
     expect(op.name).to eq(:update_user)
     expect(op.description).to eq('Update a user')
     expect(op.parameters[:name].description).to eq('User name (eg Joe)')
@@ -230,7 +230,7 @@ RSpec.describe Smidge::Client do
           )
           .and_return(response)
 
-        resp = client.update_user.run(id: 1, name: 'Joe', age: 40)
+        resp = client.update_user(id: 1, name: 'Joe', age: 40)
         expect(resp.code).to eq(200)
         expect(resp.body[:name]).to eq('Joe')
         expect(resp.body[:updated_at]).to eq(now)
