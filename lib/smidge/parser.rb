@@ -8,6 +8,7 @@ module Smidge
 
     BLANK_ARRAY = [].freeze
     BLANK_HASH = {}.freeze
+    BLANK_STRING = ''
 
     Description = (String | Nil.invoke(:to_s))
 
@@ -101,21 +102,68 @@ module Smidge
 
     OpenAPI = Hash[
       'openapi' => String,
-      'info?' => Hash[
-        'title' => String,
+      'info' => Hash[
+        'title' => String.default(BLANK_STRING),
         'description?' => Description,
         'version?' => String
-      ],
+      ].default(BLANK_HASH),
       'servers' => Array[ServerNode].default(BLANK_ARRAY),
       'tags' => Array[TagNode].default(BLANK_ARRAY),
       'paths' => Hash[String, PathNode],
       'components' => Hash.default(BLANK_HASH)
     ] >> SchemaResolver
 
-    PlanMapper = OpenAPI.pipeline do |pl|
-      pl.step do |r|
+    PathsToTuples = proc do |r|
+      ops = r.value.fetch('paths').each.with_object([]) do |(path, verbs), memo|
+        verbs.each do |verb, details|
+          memo << [path, verb, details]
+        end
+      end
 
+      r.valid ops
+    end
+
+    class TupleToOperation
+      ParamArray = Array[SymbolizedHash.build(Smidge::Operation::Param)]
+
+      def self.call(result)
+        path, verb, details = result.value
+
+        rel_name = details['operationId'].to_s.strip
+        description = details['description'] || details['summary'] || ''
+        parameters = details['parameters']
+        path_params = ParamArray.parse(parameters.select { |p| p['in'] == 'path' })
+        query_params = ParamArray.parse(parameters.select { |p| p['in'] == 'query' })
+        bschema = details.dig('requestBody', 'content', 'application/json', 'schema') || {}
+        required = (bschema['required'] || [])
+        body_params = (bschema['properties'] || {}).map do |name, prop|
+          attrs = {name:, required: required.include?(name)}.merge(SymbolizedHash.parse(prop))
+          Smidge::Operation::Param.new(attrs)
+        end
+
+        rel_name = "#{verb}_#{path}" if rel_name.empty?
+
+        result.valid(Smidge::Operation.new(
+          rel_name: Smidge.to_method_name(rel_name).to_sym, 
+          verb: verb.to_sym, 
+          path:, 
+          description:, 
+          path_params:, 
+          query_params:, 
+          body_params:
+        ))
       end
     end
+
+    BuildOperations = Hash.pipeline do |pl|
+      pl.step PathsToTuples
+      pl.step Array[TupleToOperation]
+    end
+
+    OpenAPIToOperations = OpenAPI >> BuildOperations
+    # OpenAPIToOperations = OpenAPI.pipeline do |pl|
+    #   pl.step PathsToTuples
+    #   pl.step Array[TupleToOperation]
+    # end
   end
 end

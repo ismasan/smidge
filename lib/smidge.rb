@@ -3,6 +3,7 @@
 require 'pathname'
 require 'json'
 require_relative 'smidge/version'
+require_relative 'smidge/operation'
 require_relative 'smidge/parser'
 
 module Smidge
@@ -38,7 +39,15 @@ module Smidge
     end
 
     spec = Parser::OpenAPI.parse(spec)
-    Client.new(spec, http:, base_url: base_url)
+    operations = Parser::BuildOperations.parse(spec)
+    info = spec['info']
+    base_url ||= find_base_url(spec) 
+    Client.new(operations, http:, base_url:)
+  end
+
+  def self.find_base_url(spec)
+    srv = spec['servers']&.first
+    srv ? URI(srv['url']) : nil
   end
 
   def self.to_method_name(str)

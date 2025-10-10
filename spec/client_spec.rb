@@ -3,7 +3,7 @@
 require 'spec_helper'
 
 RSpec.describe Smidge::Client do
-  subject(:client) { described_class.new(openapi_spec, http:) }
+  subject(:client) { Smidge.from_openapi(openapi_spec, http:) }
 
   let(:http) { double('http') }
   let(:openapi_spec) do
@@ -109,8 +109,8 @@ RSpec.describe Smidge::Client do
 
   specify 'fail loudly if Hash is an incomplete OpenAPI spec' do
     expect {
-      described_class.new({info: {}}, http:, base_url: 'http://localhost:9292')
-    }.to raise_error(Smidge::InvalidSpecError)
+      Smidge.from_openapi({info: {}}, http:, base_url: 'http://localhost:9292')
+    }.to raise_error(Plumb::ParseError)
   end
 
   describe 'Smidge.from_openapi' do

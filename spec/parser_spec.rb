@@ -39,6 +39,7 @@ RSpec.describe Smidge::Parser do
         },
         'post' => {
           'description' => 'Create a user',
+          'operationId' => 'create_user',
           "requestBody" => {
             "required" => true, 
             "content" => {
@@ -58,6 +59,7 @@ RSpec.describe Smidge::Parser do
       '/users/{id}' => {
         'put' => {
           "description" => "Update a user",
+          'operationId' => 'updateUser',
           "parameters" => [{"name" => "id", "in" => "path", "description" => nil, "required" => true, "schema" => {"type" => "string"}}],
           "requestBody" => {
             "required" => true, 
@@ -120,5 +122,19 @@ RSpec.describe Smidge::Parser do
     expect(req_body_schema['required']).to eq []
     expect(req_body_schema['properties']['name']['type']).to eq 'string'
     expect(req_body_schema['properties']['name']['description']).to eq 'User name'
+  end
+
+  describe Smidge::Parser::OpenAPIToOperations do
+    it 'parses an OpenAPI spec into a list of Smidge::Operation' do
+      ops = Smidge::Parser::OpenAPIToOperations.parse(openapi_spec)
+      expect(ops.map(&:class).uniq).to eq([Smidge::Operation])
+      expect(ops.map(&:rel_name)).to eq %i[users create_user update_user]
+      expect(ops.first.params.map(&:name)).to eq %i[q cat]
+      expect(ops.first.params.map(&:required)).to eq [false, false]
+      expect(ops.first.params.map(&:description)).to eq ['search by name (eg bill)', 'search by category']
+
+      expect(ops.last.params.map(&:name)).to eq %i[id name age file]
+      expect(ops.last.params.map(&:required)).to eq [true, true, true, false]
+    end
   end
 end
