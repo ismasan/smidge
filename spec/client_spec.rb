@@ -14,16 +14,7 @@ RSpec.describe Smidge::Client do
         "description" => "API for managing users",
         "version" => "0.0.1"
       },
-      "servers" => [
-        {
-          "url" => "http://localhost:9292",
-          "description" => "prod server"
-        },
-        {
-          "url" => "https://staging.api.com",
-          "description" => "Staging server"
-        }
-      ],
+      'servers' => servers,
       "paths" =>
         {"/users" =>
           {"get" =>
@@ -62,6 +53,19 @@ RSpec.describe Smidge::Client do
         }
       }
     }
+  end
+
+  let(:servers) do
+    [
+      {
+        "url" => "http://localhost:9292",
+        "description" => "prod server"
+      },
+      {
+        "url" => "https://staging.api.com",
+        "description" => "Staging server"
+      }
+    ]
   end
 
   specify 'bootstrap client from OpenAPI spec' do
@@ -181,6 +185,15 @@ RSpec.describe Smidge::Client do
         expect {
           Smidge.from_openapi('https://api.com/openapi.json', http:)
         }.to raise_error(Smidge::MissingHTTPSpecError)
+      end
+
+      describe 'when no base_url given, and spec does not have servers info' do
+        let(:servers) { [] }
+
+        it 'uses spec URL base as base_url' do
+          client = Smidge.from_openapi('https://api.com/openapi.json', http:)
+          expect(client.base_url.to_s).to eq('https://api.com')
+        end
       end
     end
 

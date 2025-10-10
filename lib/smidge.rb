@@ -23,31 +23,43 @@ module Smidge
   URL_EXP = /^http(s)?:\/\//
   READER_INTERFACE = Plumb::Types::Interface[:read]
 
-  def self.from_openapi(spec_url, http: HTTPAdapter.new, base_url: nil)
-    spec = case spec_url
+  def self.from_openapi(spec, http: HTTPAdapter.new, base_url: nil)
+    spec_url = nil
+    spec = case spec
     when URL_EXP
+      spec_url = spec
       resp = http.get(spec_url, headers: Client::REQUEST_HEADERS, symbolize_names: false)
       raise MissingHTTPSpecError.new(resp) unless (200..299).cover?(resp.code.to_i)
 
       resp.body
     when Hash
-      spec_url
+      spec
     when READER_INTERFACE
-      JSON.parse(spec_url.read)
+      JSON.parse(spec.read)
     else
-      raise ArgumentError, "Unhandled spec: #{spec_url}"
+      raise ArgumentError, "Unhandled spec: #{spec}"
     end
 
     spec = Parser::OpenAPI.parse(spec)
     operations = Parser::BuildOperations.parse(spec)
     info = spec['info']
-    base_url ||= find_base_url(spec) 
-    Client.new(operations, http:, base_url:)
+    base_url ||= find_base_url(spec, spec_url) 
+    Client.new(operations, info:, http:, base_url:)
   end
 
-  def self.find_base_url(spec)
+  def self.find_base_url(spec, spec_url)
     srv = spec['servers']&.first
-    srv ? URI(srv['url']) : nil
+    srv ? URI(srv['url']) : base_url_from_spec_url(spec_url)
+  end
+
+  def self.base_url_from_spec_url(spec_url)
+    return nil unless spec_url
+
+    URI(spec_url).tap do |url|
+      url.path = ''
+      url.query = nil
+      url.fragment = nil
+    end
   end
 
   def self.to_method_name(str)

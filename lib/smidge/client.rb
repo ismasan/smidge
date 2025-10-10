@@ -17,7 +17,7 @@ module Smidge
     attr_reader :base_url, :_operations, :_info
 
     def initialize(operations, base_url:, info: {}, http: HTTPAdapter.new)
-      @base_url = base_url
+      @base_url = Plumb::Types::Forms::URI::HTTP.parse(base_url)
 
       @_http = http
       @_operations = __build_op_lookup(operations)
