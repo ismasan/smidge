@@ -68,6 +68,22 @@ RSpec.describe Smidge::Client do
     ]
   end
 
+  specify 'building subclass from operations' do
+    klass = Class.new(Smidge::Client) do
+      info 'title' => 'test client'
+      operation name: :list_pets, verb: :get, path: '/pets', description: 'list' do |op|
+        op.param name: 'q', type: 'string', required: true
+        op.param name: 'id', type: 'string', example: '123'
+      end
+    end
+
+    op = klass.operations[:list_pets]
+    expect(op.name).to eq(:list_pets)
+    expect(op.verb).to eq(:get)
+    expect(op.description).to eq('list')
+    expect(op.parameters.values.map(&:name)).to eq(%i[q id])
+  end
+
   specify 'bootstrap client from OpenAPI spec' do
     expect(client.base_url).to eq(URI('http://localhost:9292'))
     expect(client.respond_to?(:update_user)).to be true
@@ -133,7 +149,7 @@ RSpec.describe Smidge::Client do
         reader = StringIO.new(json)
         client = Smidge.from_openapi(reader, http:)
         expect(client).to be_a(Smidge::Client)
-        expect(client._operations.values.map(&:name)).to include(:users, :update_user)
+        expect(client.class.operations.values.map(&:name)).to include(:users, :update_user)
       end
     end
 
@@ -141,7 +157,7 @@ RSpec.describe Smidge::Client do
       it 'uses the hash as a spec' do
         client = Smidge.from_openapi(openapi_spec, http:)
         expect(client).to be_a(Smidge::Client)
-        expect(client._operations.values.map(&:name)).to include(:users, :update_user)
+        expect(client.class.operations.values.map(&:name)).to include(:users, :update_user)
       end
     end
 

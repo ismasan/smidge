@@ -2,9 +2,31 @@
 
 module Smidge
   class Operation
+    class ParamBuilder
+      def initialize
+        @params = []
+      end
+
+      def to_a = @params
+
+      def param(args = {})
+        @params << Param.new(args)
+        self
+      end
+    end
+
+    def self.build(attrs, &)
+      if block_given?
+        params = ParamBuilder.new
+        yield params
+        attrs[:parameters] = params.to_a
+      end
+      new(**attrs)
+    end
+
     attr_reader :name, :verb, :path, :description, :parameters
 
-    def initialize(name:, verb:, path:, description:, parameters: {})
+    def initialize(name:, verb:, path:, description: nil, parameters: [])
       @name = name
       @verb = verb
       @path = path
@@ -30,8 +52,8 @@ module Smidge
       attr_reader :in, :name, :type, :description, :example, :required
 
       def initialize(attrs)
-        @in = attrs.fetch(:in)
         @name = attrs.fetch(:name).to_sym
+        @in = attrs.fetch(:in, 'query')
         @type = attrs.fetch(:type, :string).to_sym
         @description = attrs[:description].to_s
         @example = attrs[:example].to_s

@@ -51,7 +51,6 @@ Any OpenAPI 3.0 spec will do, but I'm also working on [Steppe](https://github.co
 Smidge turns operations in the OpenAPI spec into tools objects that are compatible with [RubyLLM tools](https://rubyllm.com/tools/)
 
 
-
 ```ruby
 # include RubyLLM in your Gemfile
 require 'ruby_llm'
@@ -73,6 +72,25 @@ chat = RubyLLM.chat.with_tools(*tools)
 # chat with your API!
 response = chat.ask "What's the weather like in London tomorrow?"
 puts response.content
+```
+
+### Manual definition
+
+```ruby
+class PetsClient < Smidge::Client
+  info title: 'pets API client'
+
+  operation name: :list_pets, verb: :get, path: '/pets', description: 'list' do |op|
+    op.param name: 'q', type: 'string', required: true
+    op.param name: 'id', type: 'string', example: '123'
+  end
+end
+
+client = PetsClient.new
+# or pass an HTTP client
+# client = PetsClient.new(http: MyHTTP.new)
+resp = client.list(q: 'cats') # #<Net::HTTPOK 200 OK readbody=true>
+resp.body # => [{name: 'Tiger', ...}]
 ```
 
 ## Installation

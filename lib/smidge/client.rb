@@ -20,13 +20,54 @@ module Smidge
       'User-Agent' => "Smidge::Client/#{Smidge::VERSION} (Ruby/#{RUBY_VERSION})"
     }.freeze
 
+    class << self
+      def inherited(child)
+        super
+        child.info(self.info.dup)
+        self.operations.each do |k, op|
+          child.operation[k] = op
+        end
+      end
+
+      def to_s = name
+
+      def info(i = nil)
+        if i
+          @info = i
+        else
+          @info
+        end
+      end
+
+      def operations
+        @operations ||= {}
+      end
+
+      def operation(op, &)
+        op = case op
+        when Hash
+          Operation.build(op, &)
+        when Operation
+          op
+        end
+
+        operations[op.name] = op
+
+        define_method(op.name) do |**kargs|
+          self[op.name].run(kargs)
+        end
+
+        self
+      end
+    end
+
     # @!attribute [r] base_url
     #   @return [URI] The base URL for API requests
     # @!attribute [r] _operations
     #   @return [Hash<Symbol, RunnableOperation>] Hash of available operations
     # @!attribute [r] _info
     #   @return [Hash] API metadata information
-    attr_reader :base_url, :_operations, :_info
+    attr_reader :base_url
 
     # Initialize a new API client
     #
@@ -34,14 +75,12 @@ module Smidge
     # @param base_url [String] The base URL for the API
     # @param info [Hash] Optional API metadata (title, version, etc.)
     # @param http [HTTPAdapter] HTTP adapter for making requests
-    def initialize(operations, base_url:, info: {}, http: HTTPAdapter.new)
+    def initialize(base_url:, http: HTTPAdapter.new)
       @base_url = Plumb::Types::Forms::URI::HTTP.parse(base_url)
-
       @_http = http
-      @_operations = __build_op_lookup(operations)
-      @_info = info
-      define_methods!
     end
+
+    def _operations = self.class.operations
 
     # Access an operation by name
     #
@@ -49,27 +88,24 @@ module Smidge
     # @return [RunnableOperation, nil] The operation, or nil if not found
     # @example
     #   client[:list_pets].run(limit: 10)
-    def [](name) = _operations[name.to_sym]
+    def [](name)
+      op = self.class.operations.fetch(name.to_sym)
+      RunnableOperation.new(op, base_url, _http)
+    end
 
     # Returns a string representation of the client
     #
     # @return [String] A human-readable representation including base URL, API info, and operation count
-    def inspect = %(<#{self.class}:#{object_id} #{base_url} "#{_info['title']}"/#{_info['version']} [#{_operations.size} operations]>)
+    def inspect = %(<#{self.class}:#{object_id} #{base_url} "#{self.class.info['title']}"/#{self.class.info['version']} [#{self.class.operations.size} operations]>)
 
     # Returns all operations as an array for use with RubyLLM
     #
     # @return [Array<RunnableOperation>] Array of all available operations
-    def to_llm_tools = _operations.values
+    def to_llm_tools = self.class.operations.keys.map { |k| self[k] }
 
     private
 
-    def define_methods!
-      _operations.keys.each do |name|
-        define_singleton_method(name) do |**kargs|
-          _operations[name].run(kargs)
-        end
-      end
-    end
+    attr_reader :_http
 
     # Wraps an Operation to make it executable with HTTP capabilities
     #
@@ -122,12 +158,6 @@ module Smidge
       #   operation.call(pet_id: 123)
       def call(args = {})
         run(args).body
-      end
-    end
-
-    def __build_op_lookup(operations)
-      operations.each.with_object({}) do |op, memo|
-        memo[op.name] = RunnableOperation.new(op, base_url, @_http)
       end
     end
   end

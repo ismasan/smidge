@@ -44,7 +44,19 @@ module Smidge
     operations = Parser::BuildOperations.parse(spec)
     info = spec['info']
     base_url ||= find_base_url(spec, spec_url) 
-    Client.new(operations, info:, http:, base_url:)
+    build_from(operations, info:).new(base_url:, http:)
+  end
+
+  def self.build_from(operations, info:)
+    klass = Class.new(Client)
+    klass.define_singleton_method(:name) do
+      'Smidge::Client'
+    end
+    klass.info(info)
+    operations.each do |op|
+      klass.operation op
+    end
+    klass
   end
 
   def self.find_base_url(spec, spec_url)
