@@ -9,7 +9,7 @@ module Smidge
       @verb = verb
       @path = path
       @description = description
-      @params_in = { 'query' => [], 'path' => [], 'body' => [] }
+      @params_in = { 'query' => [], 'path' => [], 'body' => [], 'header' => [] }
       @parameters = parameters.each.with_object({}) do |param, memo|
         @params_in[param.in] << param
         memo[param.name.to_sym] = param
