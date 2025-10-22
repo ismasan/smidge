@@ -2,7 +2,7 @@ PATH
   remote: .
   specs:
     smidge (0.1.0)
-      plumb (>= 0.0.15)
+      plumb (>= 0.0.16)
 
 GEM
   remote: https://rubygems.org/
@@ -38,7 +38,7 @@ GEM
     multipart-post (2.4.1)
     net-http (0.6.0)
       uri
-    plumb (0.0.15)
+    plumb (0.0.16)
       bigdecimal
       concurrent-ruby
     pp (0.6.3)
