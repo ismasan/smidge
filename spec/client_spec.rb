@@ -251,6 +251,62 @@ RSpec.describe Smidge::Client do
         expect(resp.body[:name]).to eq('Joe')
         expect(resp.body[:updated_at]).to eq(now)
       end
+
+      context 'when server URL has a base path' do
+        let(:servers) do
+          [{ "url" => "http://localhost:9292/api/v1" }]
+        end
+
+        it 'appends operation path to the base path' do
+          client = Smidge.from_openapi(openapi_spec, http:)
+
+          response = instance_double(
+            Net::HTTPResponse,
+            body: [{ id: 1, name: 'Joe' }],
+            code: 200,
+            content_type: 'application/json'
+          )
+
+          expect(http).to receive(:get)
+            .with(
+              'http://localhost:9292/api/v1/users',
+              headers: {
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+                'User-Agent' => "Smidge::Client/#{Smidge::VERSION} (Ruby/#{RUBY_VERSION})"
+              },
+              body: {}
+            )
+            .and_return(response)
+
+          client.users
+        end
+
+        it 'handles path parameters with base path' do
+          client = Smidge.from_openapi(openapi_spec, http:)
+
+          response = instance_double(
+            Net::HTTPResponse,
+            body: { id: 1, name: 'Joe' },
+            code: 200,
+            content_type: 'application/json'
+          )
+
+          expect(http).to receive(:put)
+            .with(
+              'http://localhost:9292/api/v1/users/42',
+              headers: {
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+                'User-Agent' => "Smidge::Client/#{Smidge::VERSION} (Ruby/#{RUBY_VERSION})"
+              },
+              body: { name: 'Joe', age: 30 }
+            )
+            .and_return(response)
+
+          client.update_user(id: 42, name: 'Joe', age: 30)
+        end
+      end
     end
   end
 

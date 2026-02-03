@@ -158,7 +158,8 @@ module Smidge
         path = path_for(kargs)
         query = query_for(kargs)
         payload = payload_for(kargs)
-        uri = URI.join(@base_url, path)
+        uri = @base_url.dup
+        uri.path = "#{uri.path.chomp('/')}/#{path.delete_prefix('/')}"
         uri.query = URI.encode_www_form(query) if query.any?
         @http.public_send(verb, uri.to_s, body: payload, headers: REQUEST_HEADERS.merge(@headers))
       end
