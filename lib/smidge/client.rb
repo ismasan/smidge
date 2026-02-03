@@ -3,7 +3,6 @@
 require 'uri'
 require "json"
 require "stringio"
-require 'smidge/inproc_adapter'
 require 'smidge/http_adapter'
 
 module Smidge

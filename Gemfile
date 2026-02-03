@@ -7,6 +7,7 @@ gemspec
 
 gem "rspec", "~> 3.0"
 gem 'debug'
+gem 'rack'
 
 group :llm do
   gem 'ruby_llm'

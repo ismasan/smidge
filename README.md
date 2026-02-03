@@ -97,8 +97,17 @@ resp.body # => [{name: 'Tiger', ...}]
 
 Smidge includes an `InprocAdapter` that sends requests to an in-memory Rack application instead of making real HTTP requests. This is useful for testing your client code against a local Rack app (Sinatra, Rails, Roda, etc.) without network overhead.
 
+The adapter requires `rack` as a dependency. Add it to your Gemfile:
+
+```ruby
+gem 'rack'
+```
+
+Then require the adapter explicitly:
+
 ```ruby
 require 'smidge'
+require 'smidge/inproc_adapter'
 
 # Your Rack application
 my_rack_app = MyApp.new
@@ -123,6 +132,8 @@ response = client.list_pets(q: 'cats')
 In RSpec:
 
 ```ruby
+require 'smidge/inproc_adapter'
+
 RSpec.describe 'API Client' do
   let(:app) { MyRackApp.new }
   let(:adapter) { Smidge::InprocAdapter.new(app) }
