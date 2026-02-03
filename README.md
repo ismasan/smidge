@@ -42,6 +42,28 @@ client._operations.values.each do |op|
 end
 ```
 
+### Custom Headers
+
+Use `#with_headers` to create a new client instance with custom HTTP headers. This is useful for authentication tokens or other headers that need to be sent with every request.
+
+```ruby
+client = Smidge.from_openapi('https://api.example.com/openapi.json')
+
+# Create a new client with Authorization header
+authenticated_client = client.with_headers('Authorization' => 'Bearer token123')
+authenticated_client.get_users(q: 'b')
+
+# Headers can be chained
+client_with_headers = client
+  .with_headers('Authorization' => 'Bearer token')
+  .with_headers('X-Request-ID' => '123')
+
+# The original client is not modified
+client.get_users(q: 'b')  # No Authorization header
+```
+
+The `#with_headers` method returns a new client instance, leaving the original unchanged. Custom headers are merged with the default headers (`Content-Type`, `Accept`, `User-Agent`).
+
 The gem uses [Plumb](https://github.com/ismasan/plumb) for data validation and transformation. It's designed to make consuming APIs easier by eliminating boilerplate HTTP client code, and to use and test APIS that expose OpenAPI specs.
 
 Any OpenAPI 3.0 spec will do, but I'm also working on [Steppe](https://github.com/ismasan/steppe), a Ruby toolkit for building REST APIs that generate OpenAPI specs automatically.

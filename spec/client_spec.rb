@@ -228,17 +228,17 @@ RSpec.describe Smidge::Client do
 
         now = Time.now
         response = instance_double(
-          Net::HTTPResponse, 
+          Net::HTTPResponse,
           body: { name: 'Joe', age: 40, updated_at: now },
-          code: 200, 
+          code: 200,
           content_type: 'application/json'
         )
 
         expect(http).to receive(:put)
           .with(
             'http://localhost:9292/users/1',
-            headers: { 
-              'Content-Type' => 'application/json', 
+            headers: {
+              'Content-Type' => 'application/json',
               'Accept' => 'application/json',
               'User-Agent' => "Smidge::Client/#{Smidge::VERSION} (Ruby/#{RUBY_VERSION})"
             },
@@ -251,6 +251,97 @@ RSpec.describe Smidge::Client do
         expect(resp.body[:name]).to eq('Joe')
         expect(resp.body[:updated_at]).to eq(now)
       end
+    end
+  end
+
+  describe '#with_headers' do
+    it 'returns a new client instance of the same class' do
+      new_client = client.with_headers('Authorization' => 'Bearer token')
+      expect(new_client).to be_a(client.class)
+      expect(new_client).not_to be(client)
+    end
+
+    it 'preserves base_url and http adapter' do
+      new_client = client.with_headers('Authorization' => 'Bearer token')
+      expect(new_client.base_url).to eq(client.base_url)
+    end
+
+    it 'sends custom headers with requests' do
+      response = instance_double(
+        Net::HTTPResponse,
+        body: [{ id: 1, name: 'Joe' }],
+        code: 200,
+        content_type: 'application/json'
+      )
+
+      expect(http).to receive(:get)
+        .with(
+          'http://localhost:9292/users',
+          headers: {
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+            'User-Agent' => "Smidge::Client/#{Smidge::VERSION} (Ruby/#{RUBY_VERSION})",
+            'Authorization' => 'Bearer token123'
+          },
+          body: {}
+        )
+        .and_return(response)
+
+      new_client = client.with_headers('Authorization' => 'Bearer token123')
+      new_client.users
+    end
+
+    it 'can be chained to add multiple headers' do
+      response = instance_double(
+        Net::HTTPResponse,
+        body: [{ id: 1, name: 'Joe' }],
+        code: 200,
+        content_type: 'application/json'
+      )
+
+      expect(http).to receive(:get)
+        .with(
+          'http://localhost:9292/users',
+          headers: {
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+            'User-Agent' => "Smidge::Client/#{Smidge::VERSION} (Ruby/#{RUBY_VERSION})",
+            'Authorization' => 'Bearer token',
+            'X-Custom-Header' => 'custom-value'
+          },
+          body: {}
+        )
+        .and_return(response)
+
+      new_client = client
+        .with_headers('Authorization' => 'Bearer token')
+        .with_headers('X-Custom-Header' => 'custom-value')
+      new_client.users
+    end
+
+    it 'does not modify the original client' do
+      response = instance_double(
+        Net::HTTPResponse,
+        body: [{ id: 1, name: 'Joe' }],
+        code: 200,
+        content_type: 'application/json'
+      )
+
+      # Original client should not have custom headers
+      expect(http).to receive(:get)
+        .with(
+          'http://localhost:9292/users',
+          headers: {
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+            'User-Agent' => "Smidge::Client/#{Smidge::VERSION} (Ruby/#{RUBY_VERSION})"
+          },
+          body: {}
+        )
+        .and_return(response)
+
+      client.with_headers('Authorization' => 'Bearer token')
+      client.users
     end
   end
 end

@@ -74,9 +74,22 @@ module Smidge
     # @param base_url [String] The base URL for the API
     # @param info [Hash] Optional API metadata (title, version, etc.)
     # @param http [HTTPAdapter] HTTP adapter for making requests
-    def initialize(base_url:, http: HTTPAdapter.new)
+    # @param headers [Hash] Optional custom headers to send with every request
+    def initialize(base_url:, http: HTTPAdapter.new, headers: {})
       @base_url = Plumb::Types::Forms::URI::HTTP.parse(base_url)
       @_http = http
+      @_headers = headers
+    end
+
+    # Returns a new client instance with additional headers
+    #
+    # @param headers [Hash] Headers to add to requests
+    # @return [Client] A new client instance with the merged headers
+    # @example
+    #   authenticated_client = client.with_headers('Authorization' => 'Bearer token123')
+    #   authenticated_client.list_pets(limit: 10)
+    def with_headers(headers)
+      self.class.new(base_url: base_url, http: _http, headers: _headers.merge(headers))
     end
 
     def _operations = self.class.operations
@@ -89,7 +102,7 @@ module Smidge
     #   client[:list_pets].run(limit: 10)
     def [](name)
       op = self.class.operations.fetch(name.to_sym)
-      RunnableOperation.new(op, base_url, _http)
+      RunnableOperation.new(op, base_url, _http, _headers)
     end
 
     # Returns a string representation of the client
@@ -104,7 +117,7 @@ module Smidge
 
     private
 
-    attr_reader :_http
+    attr_reader :_http, :_headers
 
     # Wraps an Operation to make it executable with HTTP capabilities
     #
@@ -123,10 +136,12 @@ module Smidge
       # @param op [Smidge::Operation] The operation to wrap
       # @param base_url [URI] The base URL for API requests
       # @param http [HTTPAdapter] HTTP adapter for making requests
-      def initialize(op, base_url, http)
+      # @param headers [Hash] Custom headers to include in requests
+      def initialize(op, base_url, http, headers = {})
         super op
         @base_url = base_url
         @http = http
+        @headers = headers
       end
 
       attr_reader :base_url
@@ -145,7 +160,7 @@ module Smidge
         payload = payload_for(kargs)
         uri = URI.join(@base_url, path)
         uri.query = URI.encode_www_form(query) if query.any?
-        @http.public_send(verb, uri.to_s, body: payload, headers: REQUEST_HEADERS)
+        @http.public_send(verb, uri.to_s, body: payload, headers: REQUEST_HEADERS.merge(@headers))
       end
 
       # Execute the operation and return only the response body
