@@ -93,6 +93,51 @@ resp = client.list(q: 'cats') # #<Net::HTTPOK 200 OK readbody=true>
 resp.body # => [{name: 'Tiger', ...}]
 ```
 
+### Testing with InprocAdapter
+
+Smidge includes an `InprocAdapter` that sends requests to an in-memory Rack application instead of making real HTTP requests. This is useful for testing your client code against a local Rack app (Sinatra, Rails, Roda, etc.) without network overhead.
+
+```ruby
+require 'smidge'
+
+# Your Rack application
+my_rack_app = MyApp.new
+
+# Create the in-process adapter
+adapter = Smidge::InprocAdapter.new(my_rack_app)
+
+# Use with from_openapi
+client = Smidge.from_openapi(
+  'path/to/openapi.json',
+  http: adapter,
+  base_url: 'http://test'  # URL doesn't matter, requests go to your Rack app
+)
+
+# Or with a custom client class (see "Manual definition" above)
+client = PetsClient.new(base_url: 'http://test', http: adapter)
+
+# Requests are sent directly to your Rack app, no network calls
+response = client.list_pets(q: 'cats')
+```
+
+In RSpec:
+
+```ruby
+RSpec.describe 'API Client' do
+  let(:app) { MyRackApp.new }
+  let(:adapter) { Smidge::InprocAdapter.new(app) }
+  let(:client) { PetsClient.new(base_url: 'http://test', http: adapter) }
+
+  it 'lists pets' do
+    response = client.list_pets(q: 'cats')
+    expect(response.code).to eq '200'
+    expect(response.body).to include(:name)
+  end
+end
+```
+
+The adapter handles JSON serialization/parsing automatically and returns `Net::HTTPResponse` objects, so your client code works identically whether using real HTTP or in-process testing.
+
 ## Installation
 
 TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
