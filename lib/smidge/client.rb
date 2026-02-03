@@ -129,6 +129,8 @@ module Smidge
         @http = http
       end
 
+      attr_reader :base_url
+
       # Execute the operation with the given arguments
       #
       # @param kargs [Hash] Arguments for the operation (path params, query params, body)
