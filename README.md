@@ -86,7 +86,7 @@ end
 client = Smidge.from_openapi('https://some.wheather.api/openapi.json')
 
 # turn OpenAPI operations into RubyLLM-compatible tools
-tools = CLIENT.to_llm_tools
+tools = client.to_llm_tools
 
 # register tools with RubyLLM
 chat = RubyLLM.chat.with_tools(*tools)
