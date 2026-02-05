@@ -36,17 +36,22 @@ module Smidge
     INVALID_PARAMS = -32602
     INTERNAL_ERROR = -32603
 
+    # Headers that are forwarded from MCP requests to the underlying API by default
+    DEFAULT_FORWARD_HEADERS = ['Authorization'].freeze
+
     # Initialize a new MCP server
     #
     # @param client [Smidge::Client] The Smidge client to expose as MCP tools
     # @param name [String, nil] Server name (defaults to client info title)
     # @param version [String] Server version
     # @param instructions [String, nil] Optional instructions for LLM clients
-    def initialize(client, name: nil, version: '1.0', instructions: nil)
+    # @param forward_headers [Array<String>] HTTP headers to forward from MCP requests to the API client
+    def initialize(client, name: nil, version: '1.0', instructions: nil, forward_headers: DEFAULT_FORWARD_HEADERS)
       @client = client
       @name = name || client.class.info&.dig('title') || 'Smidge MCP Server'
       @version = version
       @instructions = instructions
+      @forward_headers = forward_headers.map(&:downcase)
       @sessions = {} # session_id => { initialized: bool, protocol_version: str }
     end
 
@@ -89,8 +94,9 @@ module Smidge
 
       message = JSON.parse(body)
       session_id = request.get_header('HTTP_MCP_SESSION_ID')
+      forwarded_headers = extract_forward_headers(request)
 
-      route_message(message, session_id)
+      route_message(message, session_id, forwarded_headers)
     end
 
     def handle_delete(request)
@@ -116,21 +122,21 @@ module Smidge
       [405, { 'Allow' => 'POST, DELETE, OPTIONS' }, []]
     end
 
-    def route_message(message, session_id)
+    def route_message(message, session_id, forwarded_headers = {})
       # Handle batch requests
       if message.is_a?(Array)
-        results = message.map { |msg| process_single_message(msg, session_id) }
+        results = message.map { |msg| process_single_message(msg, session_id, forwarded_headers) }
         # Filter out nil results (from notifications)
         json_responses = results.filter_map { |r| r[:json_response] }
         return [200, response_headers(session_id), [JSON.dump(json_responses)]] if json_responses.any?
         return [204, {}, []]
       end
 
-      result = process_single_message(message, session_id)
+      result = process_single_message(message, session_id, forwarded_headers)
       result[:rack_response] || [200, response_headers(session_id), [JSON.dump(result[:json_response])]]
     end
 
-    def process_single_message(message, session_id)
+    def process_single_message(message, session_id, forwarded_headers = {})
       unless message.is_a?(Hash)
         return { json_response: json_rpc_error(nil, INVALID_REQUEST, 'Invalid request') }
       end
@@ -155,7 +161,7 @@ module Smidge
       when 'tools/list'
         handle_tools_list(id, params, session_id)
       when 'tools/call'
-        handle_tools_call(id, params, session_id)
+        handle_tools_call(id, params, session_id, forwarded_headers)
       when 'ping'
         handle_ping(id)
       else
@@ -209,7 +215,7 @@ module Smidge
       { json_response: json_rpc_result(id, result) }
     end
 
-    def handle_tools_call(id, params, session_id)
+    def handle_tools_call(id, params, session_id, forwarded_headers = {})
       tool_name = params['name']
       arguments = params['arguments'] || {}
 
@@ -219,9 +225,12 @@ module Smidge
           return { json_response: json_rpc_error(id, INVALID_PARAMS, "Unknown tool: #{tool_name}") }
         end
 
+        # Use client with forwarded headers if any are present
+        client = forwarded_headers.empty? ? @client : @client.with_headers(forwarded_headers)
+
         # Symbolize argument keys
         symbolized_args = arguments.transform_keys(&:to_sym)
-        result = @client[op_name].call(symbolized_args)
+        result = client[op_name].call(symbolized_args)
 
         content = if result.is_a?(String)
           result
@@ -312,6 +321,19 @@ module Smidge
       headers = { 'Content-Type' => CONTENT_TYPE_JSON }
       headers['MCP-Session-Id'] = session_id if session_id
       headers
+    end
+
+    # Extract headers to forward from the Rack request
+    #
+    # @param request [Rack::Request] The incoming request
+    # @return [Hash] Headers to forward to the API client
+    def extract_forward_headers(request)
+      @forward_headers.each_with_object({}) do |header_name, result|
+        # Rack converts headers to HTTP_* format (e.g., Authorization -> HTTP_AUTHORIZATION)
+        rack_key = "HTTP_#{header_name.upcase.tr('-', '_')}"
+        value = request.get_header(rack_key)
+        result[header_name.split('-').map(&:capitalize).join('-')] = value if value
+      end
     end
   end
 end

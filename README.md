@@ -171,6 +171,97 @@ end
 
 The adapter handles JSON serialization/parsing automatically and returns `Net::HTTPResponse` objects, so your client code works identically whether using real HTTP or in-process testing.
 
+### MCP Server
+
+Smidge clients can be exposed as [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) servers. This allows LLM applications to call your API operations as tools via the standard MCP protocol.
+
+The MCP server is a Rack application that you can mount standalone or alongside other apps.
+
+```ruby
+require 'smidge'
+require 'smidge/mcp_server'
+
+# Smidge acts as a Bridge between a REST API and an LLM
+client = Smidge.from_openapi('https://api.example.com/openapi.json')
+mcp = Smidge::MCPServer.new(client)
+
+run mcp
+```
+
+#### Configuration options
+
+```ruby
+mcp = Smidge::MCPServer.new(client,
+  name: 'My API',           # Server name (defaults to OpenAPI title)
+  version: '1.0',           # Server version
+  instructions: 'Use this API to manage users'  # Optional instructions for LLMs
+)
+```
+
+#### Header forwarding
+
+The MCP server automatically forwards the `Authorization` header from incoming MCP requests to the underlying API. This allows MCP clients to authenticate with their own credentials.
+
+```ruby
+# Default - Authorization header forwarded automatically
+mcp = Smidge::MCPServer.new(client)
+
+# Forward additional headers
+mcp = Smidge::MCPServer.new(client,
+  forward_headers: ['Authorization', 'X-Tenant-Id', 'X-Request-Id']
+)
+
+# Disable header forwarding
+mcp = Smidge::MCPServer.new(client, forward_headers: [])
+```
+
+You can combine static headers on the client with dynamic forwarded headers:
+
+```ruby
+# Client has a static API key, MCP forwards user's Authorization
+client = Smidge.from_openapi('https://api.example.com/openapi.json')
+  .with_headers('X-API-Key' => ENV['API_KEY'])
+
+mcp = Smidge::MCPServer.new(client)
+# Both X-API-Key and the user's Authorization will be sent to the API
+```
+
+#### Mounting at a path
+
+```ruby
+map '/mcp' do
+  run Smidge::MCPServer.new(client)
+end
+
+map '/' do
+  run MyMainApp
+end
+```
+
+#### Testing with curl
+
+```bash
+# Start the server
+rackup config.ru -p 9292
+
+# Initialize MCP session
+curl -X POST http://localhost:9292 \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test"}}}'
+
+# List available tools
+curl -X POST http://localhost:9292 \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+
+# Call a tool with authentication
+curl -X POST http://localhost:9292 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer user-token" \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"list_users","arguments":{"limit":10}}}'
+```
+
 ## Installation
 
 TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.

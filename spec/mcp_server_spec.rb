@@ -517,4 +517,111 @@ RSpec.describe Smidge::MCPServer do
       expect(body.join).to be_empty
     end
   end
+
+  describe 'header forwarding' do
+    it 'forwards Authorization header to the API client by default' do
+      response = double('response', body: [{ id: 1, name: 'Alice' }])
+      expect(http_adapter).to receive(:get) do |url, options|
+        expect(options[:headers]['Authorization']).to eq('Bearer test-token')
+        response
+      end
+
+      status, _headers, body = parse_response(post_json({
+        'jsonrpc' => '2.0',
+        'id' => 1,
+        'method' => 'tools/call',
+        'params' => {
+          'name' => 'list_users',
+          'arguments' => {}
+        }
+      }, { 'Authorization' => 'Bearer test-token' }))
+
+      expect(status).to eq(200)
+      expect(body['result']['isError']).to eq(false)
+    end
+
+    it 'does not modify client when no forwarded headers are present' do
+      response = double('response', body: [{ id: 1, name: 'Alice' }])
+      expect(http_adapter).to receive(:get) do |url, options|
+        expect(options[:headers]).not_to have_key('Authorization')
+        response
+      end
+
+      post_json({
+        'jsonrpc' => '2.0',
+        'id' => 1,
+        'method' => 'tools/call',
+        'params' => {
+          'name' => 'list_users',
+          'arguments' => {}
+        }
+      })
+    end
+
+    context 'with custom forward_headers' do
+      subject(:mcp) { described_class.new(client, forward_headers: ['Authorization', 'X-Custom-Header']) }
+
+      it 'forwards specified headers' do
+        response = double('response', body: [{ id: 1 }])
+        expect(http_adapter).to receive(:get) do |url, options|
+          expect(options[:headers]['Authorization']).to eq('Bearer token')
+          expect(options[:headers]['X-Custom-Header']).to eq('custom-value')
+          response
+        end
+
+        post_json({
+          'jsonrpc' => '2.0',
+          'id' => 1,
+          'method' => 'tools/call',
+          'params' => { 'name' => 'list_users', 'arguments' => {} }
+        }, { 'Authorization' => 'Bearer token', 'X-Custom-Header' => 'custom-value' })
+      end
+    end
+
+    context 'with empty forward_headers' do
+      subject(:mcp) { described_class.new(client, forward_headers: []) }
+
+      it 'does not forward any headers' do
+        response = double('response', body: [{ id: 1 }])
+        expect(http_adapter).to receive(:get) do |url, options|
+          expect(options[:headers]).not_to have_key('Authorization')
+          response
+        end
+
+        post_json({
+          'jsonrpc' => '2.0',
+          'id' => 1,
+          'method' => 'tools/call',
+          'params' => { 'name' => 'list_users', 'arguments' => {} }
+        }, { 'Authorization' => 'Bearer ignored' })
+      end
+    end
+
+    it 'preserves headers already set on the client' do
+      client_with_headers = client.with_headers('X-API-Key' => 'static-key')
+      mcp_with_client = described_class.new(client_with_headers)
+
+      response = double('response', body: [{ id: 1 }])
+      expect(http_adapter).to receive(:get) do |url, options|
+        expect(options[:headers]['X-API-Key']).to eq('static-key')
+        expect(options[:headers]['Authorization']).to eq('Bearer dynamic-token')
+        response
+      end
+
+      env = Rack::MockRequest.env_for(
+        '/',
+        method: 'POST',
+        input: JSON.dump({
+          'jsonrpc' => '2.0',
+          'id' => 1,
+          'method' => 'tools/call',
+          'params' => { 'name' => 'list_users', 'arguments' => {} }
+        }),
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_ACCEPT' => 'application/json',
+        'HTTP_AUTHORIZATION' => 'Bearer dynamic-token'
+      )
+      mcp_with_client.call(env)
+    end
+  end
 end
