@@ -15,7 +15,7 @@ RubyLLM.configure do |config|
   config.openai_api_key = ENV.fetch('OPENAI_API_KEY')
 end
 
-OPEN_API_URL = ENV.fetch('OPEN_API', 'http://localhost:9292')
+OPEN_API_URL = ENV.fetch('OPEN_API', 'http://localhost:9292/openapi.json')
 
 # Bootstrap Smidle client from OpenAPI spec
 CLIENT = Smidge.from_openapi(OPEN_API_URL, base_url: OPEN_API_URL)
